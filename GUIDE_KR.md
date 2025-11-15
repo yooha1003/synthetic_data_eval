@@ -37,6 +37,34 @@ pip install -r requirements.txt
 
 ### 기본 사용법
 
+#### 방법 1: NIfTI 파일 사용 (권장!) 🌟
+
+```python
+from evaluator import MRIEvaluator
+
+# 평가기 생성
+evaluator = MRIEvaluator()
+
+# NIfTI 파일에서 직접 평가
+results = evaluator.evaluate_from_files(
+    'real_mri.nii.gz',
+    'synthetic_mri.nii.gz',
+    loader_kwargs={
+        'slice_axis': 2,  # 0=sagittal, 1=coronal, 2=axial
+        'normalize': True
+    }
+)
+
+# 결과 출력
+evaluator.print_report(results)
+
+# 저장
+evaluator.export_json(results, 'results.json')
+evaluator.export_latex_table(results, 'table.tex')
+```
+
+#### 방법 2: NumPy 배열 사용
+
 ```python
 from evaluator import MRIEvaluator
 import numpy as np
@@ -51,11 +79,13 @@ results = evaluator.evaluate_all(real_images, synthetic_images)
 
 # 결과 출력
 evaluator.print_report(results)
-
-# 저장
-evaluator.export_json(results, 'results.json')
-evaluator.export_latex_table(results, 'table.tex')
 ```
+
+#### 지원 포맷
+
+- **NIfTI**: `.nii`, `.nii.gz` ⭐ (가장 일반적인 MRI 포맷)
+- **NumPy**: `.npy`
+- **이미지**: `.png`, `.jpg`, `.jpeg`
 
 ## 📊 지표 해석 가이드
 
@@ -170,7 +200,67 @@ reproduced.
 
 ## 🔬 고급 사용법
 
-### 1. 특정 지표만 계산
+### 1. NIfTI 파일 고급 사용법
+
+#### 디렉토리의 모든 NIfTI 파일 평가
+
+```python
+from evaluator import MRIEvaluator
+
+evaluator = MRIEvaluator()
+
+# 디렉토리의 모든 .nii.gz 파일 자동 로드 및 평가
+results = evaluator.evaluate_from_files(
+    'real_mri_dir/',
+    'synthetic_mri_dir/',
+    loader_kwargs={
+        'slice_axis': 2,
+        'slices_per_volume': 20,  # 각 볼륨에서 20개 슬라이스 샘플링
+    }
+)
+```
+
+#### 특정 슬라이스 범위만 평가
+
+```python
+from data_loader import load_nifti
+
+# 100-150번 슬라이스만 로드
+real_images = load_nifti(
+    'real_mri.nii.gz',
+    slice_axis=2,
+    slice_range=(100, 150)
+)
+
+synthetic_images = load_nifti(
+    'synthetic_mri.nii.gz',
+    slice_axis=2,
+    slice_range=(100, 150)
+)
+
+evaluator = MRIEvaluator()
+results = evaluator.evaluate_all(real_images, synthetic_images)
+```
+
+#### 다양한 방향(Orientation)에서 평가
+
+```python
+orientations = {
+    'Sagittal': 0,
+    'Coronal': 1,
+    'Axial': 2
+}
+
+for name, axis in orientations.items():
+    print(f"\n{name} 평면 평가...")
+    results = evaluator.evaluate_from_files(
+        'real_mri.nii.gz',
+        'synthetic_mri.nii.gz',
+        loader_kwargs={'slice_axis': axis}
+    )
+```
+
+### 2. 특정 지표만 계산
 
 ```python
 from metrics.perceptual import calculate_lpips
@@ -183,7 +273,7 @@ lpips = calculate_lpips(real_images, synthetic_images)
 grad_sim = calculate_gradient_similarity(real_images, synthetic_images)
 ```
 
-### 2. 세그멘테이션 기반 평가
+### 3. 세그멘테이션 기반 평가
 
 ```python
 # 세그멘테이션 맵 준비 (N, H, W)
@@ -203,7 +293,7 @@ results = evaluator.evaluate_all(
 )
 ```
 
-### 3. 배치 실험 비교
+### 4. 배치 실험 비교
 
 ```python
 experiments = ['DDPM_50', 'DDPM_100', 'DDPM_200']
@@ -217,6 +307,24 @@ for exp in experiments:
 # 최고 성능 찾기
 best = max(results_all.items(),
            key=lambda x: x[1]['gradient_similarity'])
+```
+
+### 5. NIfTI 메타데이터 활용
+
+```python
+from data_loader import get_metadata_nifti
+
+# 메타데이터 추출
+metadata = get_metadata_nifti('real_mri.nii.gz')
+
+print(f"Shape: {metadata['shape']}")
+print(f"Voxel Size: {metadata['voxel_size']}")
+print(f"Data Type: {metadata['data_type']}")
+
+# Voxel size를 고려한 slice axis 선택
+voxel_size = metadata['voxel_size']
+best_axis = np.argmin(voxel_size[:3])  # 가장 해상도 높은 축
+print(f"권장 slice_axis: {best_axis}")
 ```
 
 ## ⚠️ 주의사항

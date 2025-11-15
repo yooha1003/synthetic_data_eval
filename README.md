@@ -38,6 +38,30 @@ pip install -r requirements.txt
 
 ## 빠른 시작
 
+### 방법 1: NIfTI 파일 직접 로드 (권장!)
+
+```python
+from evaluator import MRIEvaluator
+
+# 평가기 초기화
+evaluator = MRIEvaluator()
+
+# NIfTI 파일에서 직접 평가
+results = evaluator.evaluate_from_files(
+    'real_mri.nii.gz',
+    'synthetic_mri.nii.gz',
+    loader_kwargs={'slice_axis': 2}  # 0=sagittal, 1=coronal, 2=axial
+)
+
+# 결과 출력
+evaluator.print_report(results)
+
+# 논문용 LaTeX 표 생성
+evaluator.export_latex_table(results, 'results_table.tex')
+```
+
+### 방법 2: NumPy 배열 사용
+
 ```python
 from evaluator import MRIEvaluator
 import numpy as np
@@ -54,10 +78,13 @@ results = evaluator.evaluate_all(real_images, synthetic_images)
 
 # 결과 출력
 evaluator.print_report(results)
-
-# 논문용 LaTeX 표 생성
-evaluator.export_latex_table(results, 'results_table.tex')
 ```
+
+### 지원 포맷
+
+- **NIfTI**: `.nii`, `.nii.gz` (가장 일반적인 MRI 포맷)
+- **NumPy**: `.npy`
+- **이미지**: `.png`, `.jpg`, `.jpeg`
 
 ## 내부 조직 구조 평가에 중요한 지표
 
@@ -70,7 +97,16 @@ evaluator.export_latex_table(results, 'results_table.tex')
 
 ## 사용 예시
 
+### NumPy 배열 사용
 자세한 사용법은 `example_usage.py`를 참고하세요.
+
+### NIfTI 파일 사용
+NIfTI 파일 사용 예시는 `example_nifti_usage.py`를 참고하세요:
+- 단일 NIfTI 파일 평가
+- 디렉토리의 여러 NIfTI 파일 배치 평가
+- 특정 슬라이스 범위 선택
+- 다양한 방향(Axial, Coronal, Sagittal) 평가
+- 실제 연구 워크플로우
 
 ## 논문 보고 권장사항
 

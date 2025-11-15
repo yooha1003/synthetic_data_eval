@@ -5,7 +5,7 @@ MRI Synthesis Evaluator
 """
 
 import numpy as np
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 import warnings
 from pathlib import Path
 import json
@@ -15,6 +15,7 @@ from metrics.perceptual import calculate_all_perceptual_metrics
 from metrics.distribution import calculate_all_distribution_metrics
 from metrics.structural import calculate_all_structural_metrics
 from metrics.segmentation import calculate_all_segmentation_metrics
+from data_loader import auto_load, load_real_and_synthetic
 
 
 class MRIEvaluator:
@@ -44,6 +45,54 @@ class MRIEvaluator:
         self.device = device
         self.lpips_net = lpips_net
         self.verbose = verbose
+
+    def evaluate_from_files(
+        self,
+        real_path: Union[str, Path],
+        synthetic_path: Union[str, Path],
+        file_type: str = 'auto',
+        loader_kwargs: Optional[dict] = None,
+        **eval_kwargs
+    ) -> Dict:
+        """
+        파일에서 직접 로드하여 평가
+
+        지원 포맷: NIfTI (.nii, .nii.gz), NumPy (.npy), 이미지 (.png, .jpg)
+
+        Args:
+            real_path: 원본 이미지 파일/디렉토리 경로
+            synthetic_path: 합성 이미지 파일/디렉토리 경로
+            file_type: 파일 타입 ('auto', 'nifti', 'numpy', 'image')
+            loader_kwargs: 데이터 로더 인자 (slice_axis, normalize 등)
+            **eval_kwargs: evaluate_all()의 인자들
+
+        Returns:
+            평가 결과 딕셔너리
+
+        Example:
+            >>> evaluator = MRIEvaluator()
+            >>> # NIfTI 파일 평가
+            >>> results = evaluator.evaluate_from_files(
+            ...     'real_mri.nii.gz',
+            ...     'synthetic_mri.nii.gz'
+            ... )
+            >>> # 디렉토리 평가
+            >>> results = evaluator.evaluate_from_files(
+            ...     'real_dir/',
+            ...     'synthetic_dir/',
+            ...     loader_kwargs={'slice_axis': 2}
+            ... )
+        """
+        if loader_kwargs is None:
+            loader_kwargs = {}
+
+        # 파일 로드
+        real_images, synthetic_images = load_real_and_synthetic(
+            real_path, synthetic_path, **loader_kwargs
+        )
+
+        # 평가
+        return self.evaluate_all(real_images, synthetic_images, **eval_kwargs)
 
     def evaluate_all(
         self,
